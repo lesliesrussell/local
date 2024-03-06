@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# Get URL from clipboard
+# For Linux:
+URL=$(xclip -o)
+
+# For macOS, replace the above line with:
+# URL=$(pbpaste)
+
+# Directory where you want to clone repositories
+REPO_DIR="$HOME/.repos"
+
+# Check if the URL is a valid GitHub URL
+if [[ $URL =~ ^https://github.com/[^/]+/[^/]+ ]]; then
+    # Change to the repository directory
+    cd "$REPO_DIR"
+    
+    # Clone the repository
+    git clone "$URL"
+    echo "Repository cloned to $REPO_DIR"
+else
+    echo "Clipboard does not contain a valid GitHub URL."
+fi

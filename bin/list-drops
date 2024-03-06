@@ -1,0 +1,18 @@
+#!/bin/bash
+
+# Script Name: fzf-undrop
+
+# Define the target directory
+DROPPED_THINGS_DIR="$HOME/.local/share/dropped-things"
+
+# Ensure the directory exists
+mkdir -p "$DROPPED_THINGS_DIR"
+
+# List, select, and undrop the thing
+selection=$(ls "$DROPPED_THINGS_DIR" | fzf --prompt="Undrop: ")
+
+if [[ -n $selection ]]; then
+    drop-thing -u "$selection"
+else
+    echo "No selection made."
+fi

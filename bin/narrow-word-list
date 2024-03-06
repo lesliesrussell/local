@@ -1,0 +1,35 @@
+#!/bin/bash
+
+# Default values
+length=4
+modify=0
+
+# Parse command-line options
+while getopts "l:d:" opt; do
+  case ${opt} in
+    l )
+      length=$OPTARG
+      ;;
+    d )
+      modify=$OPTARG
+      ;;
+    \? )
+      echo "Usage: cmd [-l length] [-d modify]"
+      exit 1
+      ;;
+  esac
+done
+
+# Filename
+filename="words"
+
+# Check if modify flag is set to 1
+if [[ $modify -eq 1 ]]; then
+  # Create a backup before modification
+  cp "$filename" "${filename}-backup-$(date +%Y-%m-%d-%H%M%S)"
+  # Use AWK to select words of specified length and overwrite original file
+  awk -v len="$length" '{for(i=1;i<=NF;i++) if(length($i) >= len) print $i}' "$filename" > "${filename}.tmp" && mv "${filename}.tmp" "$filename"
+else
+  # Use AWK to select words of specified length and output to stdout
+  awk -v len="$length" '{for(i=1;i<=NF;i++) if(length($i) >= len) print $i}' "$filename"
+fi

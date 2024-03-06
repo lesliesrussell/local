@@ -1,0 +1,31 @@
+#!/bin/bash
+
+# Check if a search term was provided
+if [ "$#" -ne 1 ]; then
+    echo "Usage: $0 <search-term>"
+    exit 1
+fi
+
+SEARCH_TERM=$1
+GITHUB_API_URL="https://api.github.com/search/repositories?q=${SEARCH_TERM}&sort=stars&order=desc"
+
+# Prepare the ~/.repos directory
+REPO_DIR="$HOME/.repos"
+mkdir -p "${REPO_DIR}"
+
+# Use curl to fetch the search results, jq to parse and format the output, and fzf to select a repository
+SELECTED_REPO=$(curl -s "${GITHUB_API_URL}" | jq -r '.items[] | "\(.full_name) - \(.clone_url)"' | fzf --delimiter=' - ' --with-nth=1)
+
+# Exit if no repository was selected
+if [ -z "$SELECTED_REPO" ]; then
+    echo "No repository selected."
+    exit 0
+fi
+
+# Extract the clone URL from the selected repository
+CLONE_URL=$(echo $SELECTED_REPO | cut -d ' ' -f 3-)
+
+# Clone the selected repository
+git clone "$CLONE_URL" "${REPO_DIR}/$(basename $CLONE_URL .git)"
+
+echo "Repository cloned to ${REPO_DIR}/$(basename $CLONE_URL .git)"

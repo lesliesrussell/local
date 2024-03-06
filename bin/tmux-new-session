@@ -1,0 +1,16 @@
+#!/bin/bash
+
+# Check if Alacritty is installed
+if ! command -v alacritty &> /dev/null; then
+    echo "Alacritty is not installed. Please install Alacritty before running this script."
+    exit 1
+fi
+
+# Check if tmux is installed
+if ! command -v tmux &> /dev/null; then
+    echo "Tmux is not installed. Please install Tmux before running this script."
+    exit 1
+fi
+
+# Create a new Alacritty window and run tmux new-session command
+alacritty -e tmux new-session -s $(tmux-session-namer)

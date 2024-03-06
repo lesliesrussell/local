@@ -1,0 +1,72 @@
+#!/bin/bash
+
+# Script Name: drop-thing
+
+# Define the destination directory
+dest_dir="$HOME/.local/share/dropped-things"
+
+# Function to encode the original full path of the thing by replacing '/' with '__', excluding the basename
+encode_full_path() {
+    local full_path="$1"
+    # Remove the basename to keep only the directory path
+    local dir_path=$(dirname "$full_path")
+    # Replace '/' with '__', except for the leading '/'
+    echo "$dir_path" | sed -e 's:^\(.\)/:\1__:' -e 's:/:__:g'
+}
+
+# Function to decode the full path back to its original form
+decode_full_path() {
+    local encoded_path="$1"
+    # Replace '__' back with '/'
+    echo "$encoded_path" | sed 's:__:/:g'
+}
+
+# Function to drop the thing
+drop_thing() {
+    local thing_path=$(realpath "$1")  # Convert to full path
+    local thing_name="$(basename "$thing_path")"
+    local datetime_prefix=$(date "+%Y-%m-%d-%H%M%S")
+    local encoded_full_path=$(encode_full_path "$thing_path")
+    local new_name="${datetime_prefix}--${encoded_full_path}--${thing_name}"
+
+    # Ensure the destination directory exists
+    mkdir -p "$dest_dir"
+
+    # Move and rename the thing
+    mv "$thing_path" "$dest_dir/$new_name" && echo "Dropped: $thing_name"
+}
+
+undrop_thing() {
+    local search_name="$1"
+    # Directly use the selected name without searching again
+    local dropped_item="$dest_dir/$search_name"
+
+    # Check if the selected item exists
+    # if [[ ! -f "$dropped_item" ]]; then
+    #     echo "The selected item does not exist."
+    #     return
+    # fi
+
+    # Extract the encoded path and the original name from the filename
+    local encoded_path_and_name="${search_name#*--}"  # Remove the datetime prefix
+    local original_name="${encoded_path_and_name##*--}"  # Extract the original name
+    local encoded_path="${encoded_path_and_name%--$original_name}"  # Extract the encoded path
+
+    # Decode the path back to its original form
+    local original_path=$(decode_full_path "$encoded_path")
+
+    # Ensure the original directory exists
+    mkdir -p "$original_path"
+
+    # Move the item back to its original location
+    mv "$dropped_item" "$original_path/$original_name" && echo "Undropped: $original_name"
+}
+
+# Main logic
+if [[ "$1" == "-u" ]]; then
+    # Undrop mode
+    undrop_thing "$2"
+else
+    # Drop mode
+    drop_thing "$1"
+fi

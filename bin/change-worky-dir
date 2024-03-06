@@ -1,0 +1,21 @@
+#!/bin/bash
+# This script allows the user to select a directory referenced in ~/.bash_aliases
+# (specifically those aliased to 'cd' commands), then opens a new tmux window
+# with the name set to the selected directory's name and changes to that directory.
+
+# Extract directory paths from aliases defined in ~/.bash_aliases.
+# It looks for lines that set aliases for 'cd' to specific paths and extracts those paths.
+
+# Extract directories from .bash_aliases where aliases are defined for 'cd' commands
+selected_dir=$(grep "='cd " ~/.bash_aliases | sed "s/.*='cd \(.*\)'/\1/" | fzf --border --preview 'ls -la {}')
+
+# If a directory was selected (i.e., the variable is not empty), change to that directory
+if [ -n "$selected_dir" ]; then
+# Extract the basename of the selected directory to use as the window name
+    dir_name=$(basename "$selected_dir")
+    tmux new-window -n "worky: $dir_name" "cd $selected_dir; exec bash" || exit
+    # After changing directories, you might want to do something else, like listing the contents. Uncomment the next line if needed.
+    # ls
+else
+    echo "No directory selected."
+fi

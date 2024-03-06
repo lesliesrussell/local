@@ -1,0 +1,4 @@
+#!/bin/bash
+# List tmux sessions formatted for dmenu
+tmux list-sessions -F "#{session_name}"
+

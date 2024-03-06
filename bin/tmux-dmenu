@@ -1,0 +1,12 @@
+#!/bin/bash
+# List tmux sessions and select one using dmenu
+selected_session=$(tmux list-sessions -F "#{session_name}" | dmenu -i -p "Select tmux session:")
+
+# Check if a session was selected (i.e., if the user didn't just exit dmenu)
+if [ -n "$selected_session" ]; then
+    # Use tmux-sesame to attach/manage the selected session
+    # Assuming tmux-sesame is a command you have set up for attaching to tmux sessions
+    tmux-sesame "$selected_session"
+else
+    echo "No session selected."
+fi

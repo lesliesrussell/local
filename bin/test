@@ -1,0 +1,13 @@
+#!/bin/bash
+while getopts "h" opt; do
+  case "$opt" in
+    h)
+      echo "Usage: $0 [-h]"
+      exit 0
+      ;;
+    *)
+      echo "Invalid option: -$opt"
+      exit 1
+      ;;
+  esac
+done

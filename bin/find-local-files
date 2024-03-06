@@ -1,0 +1,20 @@
+#!/bin/bash
+# Check if bat is available for preview, otherwise use cat
+previewer="cat"
+if command -v bat > /dev/null; then
+    previewer="bat --style=numbers --color=always"
+fi
+
+# Use find to list all files (excluding directories), and exclude .git directory,
+# pipe to fzf for selection
+# Preview selected file using bat or cat, allow multiple selections
+files_to_edit=$(find . -type f ! -path '*/.git/*' \
+    | fzf --multi --preview="${previewer} {}")
+
+# Check if any files were selected
+if [ -n "$files_to_edit" ]; then
+    # Open selected files in nvim
+    nvim $files_to_edit
+else
+    echo "No files selected for editing."
+fi

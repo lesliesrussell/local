@@ -1,0 +1,25 @@
+#!/bin/bash
+
+# Define the path to the words file
+# Drop the words file in $HOME/.local/share/words/
+WORDS_FILE="$HOME/.local/share/words/words"
+
+# Default number of words
+NUM_WORDS=2
+
+# Parse options
+while getopts "c:" opt; do
+  case $opt in
+    c) NUM_WORDS=$OPTARG ;;
+    \?) echo "Invalid option: -$OPTARG" >&2; exit 1 ;;
+  esac
+done
+
+# Check if the words file exists
+if [[ -f "$WORDS_FILE" ]]; then
+    # Pick random words from the file, concatenate them with a dash
+    shuf -n "$NUM_WORDS" "$WORDS_FILE" | tr '\n' '-' | sed 's/-$//'
+else
+    echo "The words file does not exist. Please create $WORDS_FILE with your desired words."
+    exit 1
+fi

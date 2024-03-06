@@ -1,0 +1,132 @@
+#!/usr/bin/bash
+
+# Based off: https://github.com/junegunn/fzf/blob/master/ADVANCED.md#ripgrep-integration
+
+VERSION=0.1.0
+
+TEXTDOMAIN="${0##*/}" TEXTDOMAIN="${TEXTDOMAIN%%.*}"
+export TEXTDOMAIN TEXTDOMAINDIR="${0%/*}/locale"
+. gettext.sh
+
+function parser {
+	setup REST help:usage -- "$(gettext 'Use rg with fzf')"
+	msg -- '' "$(gettext 'USAGE:')" "  ${0##*/} $(gettext '[OPTIONS] [SEARCH_TERMS]')"
+	msg -- '' "$(gettext 'OPTIONS:')"
+	flag Opt_d -d --double-filter -- "$(gettext 'Use double filtering between rg and fzf')"
+	param Opt_rg --rg pattern:"rg | rga | grep" -- "$(gettext 'rg program (rg, rga or grep)')"
+	flag Opt_p -p --preview -- "$(gettext 'Show a preview window')"
+	flag Opt_e -e --editor -- "$(gettext 'Open with $EDITOR')"
+	flag Opt_o -o --opener -- "$(gettext 'Open with $OPENER')"
+	flag Opt_m -m --multiple -- "$(gettext 'Multiple selection')"
+	param Opt_s -s --sleep -- "$(gettext 'Seconds to wait till reload command')" # TODO: add validator, right now injection is possible
+	param Opt_depth --depth -- "$(gettext 'Depth of directory recursion')"
+	param Opt_header --header  -- "$(gettext 'Header title')"
+	param Opt_prompt --prompt  -- "$(gettext 'Prompt')"
+	disp :usage -h --help -- "$(gettext 'Show this help')"
+	disp VERSION --version -- "$(gettext 'Show version')"
+}
+
+eval "$(getopt parser) exit 1"
+
+function double_filter_args {
+	fzf_args+=(
+		--disabled
+		--bind "ctrl-f:unbind(change,ctrl-f)+change-prompt(fzf ⮞ )+enable-search+clear-query+rebind(ctrl-r)"
+		--bind "ctrl-r:unbind(ctrl-r)+change-prompt(rg ⮞ )+disable-search+reload(${rg_cmd[*]} {q} || true)+rebind(change,ctrl-f)"
+		--prompt 'rg ⮞ '
+		--bind "change:reload:$sleep_cmd ${rg_cmd[*]} {q} || true"
+	)
+	if ! [ "$Opt_header" ]; then
+		fzf_args+=(--header 'Ctrl-r (Búsqueda rg) ╱ Ctrl-f (Búsqueda fzf)')
+	fi
+}
+
+function main {
+	local RG="${Opt_rg:-"${RG:-"rg"}"}"
+	local initial_query="${*:-}"
+	local fzf_cmd
+
+	case "$RG" in
+		grep)
+			local -a rg_cmd=(
+				"$RG" -ERHIni --color=always
+				# there's no option to match column offset
+			)
+			# TODO: make rg and grep get the same number of lines to select from
+			;;
+		rg|rga)
+			local -a rg_cmd=(
+				"$RG"
+				--column
+				--line-number
+				--no-heading
+				--color=always
+			)
+			;;
+	esac
+
+	local -a fzf_args=(
+		--ansi
+		--delimiter :
+		--layout=reverse
+		--header-first
+		--query "$initial_query"
+		${Opt_m:+-m}
+	)
+
+	if [ "$Opt_s" ]; then
+		local sleep_cmd='sleep '"$Opt_s"';'
+	fi
+
+	if [ "$Opt_depth" ]; then
+		rg_cmd+=(--max-depth "$Opt_depth")
+	fi
+
+	if [ "$Opt_header" ]; then
+		fzf_args+=(--header "$Opt_header")
+	fi
+
+	if [ "$Opt_p" ]; then
+		fzf_args+=(
+			--preview 'bat --color=always {1} --highlight-line {2}'
+			--preview-window 'down,60%,noborder,+{2}+3/3,~3'
+		)
+		#		--preview 'a=$(($(echo {2})-40)) b=$((a+80));
+		#bat --color=always {1} --highlight-line {2} --line-range "$((a-40<0?0:a)):$b"' \
+	fi
+
+	if [ "$Opt_d" ]; then
+		# Switch between Ripgrep launcher mode (Ctrl-r) and fzf filtering mode (Ctrl-f)
+		double_filter_args
+	fi
+
+	fzf_cmd+=( fzf "${fzf_args[@]}" )
+
+	# TODO: handle files with ':' in their name
+	# maybe by storing them in a temp file, from which the preview command can read
+
+	#IFS=: read -ra selected < <(
+	res=$(
+		FZF_DEFAULT_COMMAND="${rg_cmd[*]} $(printf %q "$initial_query")" \
+			"${fzf_cmd[@]}"
+	)
+
+	files=$(cut -d: -f1 <<< "$res")
+
+	if [ "${#files}" -ne 0 ]; then
+		if [ "$Opt_e" ]; then
+			exec "${EDITOR:-nvim}" "${files[@]}"
+			#exec "${EDITOR:-nvim}" "${files[0]}" "+${line[0]}"
+		elif [ "$Opt_o" ]; then
+			({ nohup "${OPENER:-xdg-open}" "$(realpath ${files[@]})" >/dev/null 2>&1 & } &)
+		else
+			builtin printf -- "%s\n" "${files[@]}"
+		fi
+	else
+		return 1
+	fi
+}
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+	main "$@" || exit $?
+fi

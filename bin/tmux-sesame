@@ -1,0 +1,25 @@
+#!/bin/bash
+# Check if an argument was passed to the script
+if [ $# -gt 0 ]; then
+    # If an argument was passed, use it as the session name
+    selected_session="$1"
+else
+    # List available tmux sessions and use fzf to select one
+    selected_session=$(tmux list-sessions -F "#{session_name}" | fzf \
+        --height 30% --layout=reverse)
+fi
+
+# Check if a session was selected or provided as an argument
+if [ -n "$selected_session" ]; then
+    # Check if the session exists
+    if tmux has-session -t "$selected_session" 2>/dev/null; then
+        # If the session exists (or an argument was provided and it exists), attach to it
+        alacritty -e tmux attach-session -t "$selected_session"
+    else
+        echo "Session '$selected_session' does not exist."
+        exit 1
+    fi
+else
+    echo "No tmux session selected."
+fi
+

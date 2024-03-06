@@ -1,0 +1,14 @@
+#!/bin/bash
+# Execute tmux-session-namer and store the output in session_name variable
+session_name=$(tmux-session-namer)
+
+# Check if the session already exists
+if tmux has-session -t "$session_name" 2>/dev/null; then
+    echo "Session '$session_name' already exists. Exiting."
+    exit 2
+fi
+
+# Create a new tmux session with the provided name, detached
+tmux new-session -d -s "$session_name"
+
+echo "New tmux session '$session_name' created successfully."
